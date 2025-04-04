@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -20,10 +20,19 @@ const firebaseConfig = {
   measurementId: "G-BPEXX8H56S"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const realtimeDb = getDatabase(app);
-export const storage = getStorage(app);
+/// ✅ Initialize Firebase FIRST
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// ✅ Initialize Firebase services AFTER app is created
+const auth = getAuth(app);
+const db = getFirestore(app);
+const realtimeDb = getDatabase(app);
+const storage = getStorage(app);
+
+// ✅ Initialize Analytics only if supported
+let analytics;
+if (typeof window !== "undefined") {
+  analytics = getAnalytics(app);
+}
+
+export { auth, db, realtimeDb, storage };

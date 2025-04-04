@@ -9,12 +9,15 @@ import SellScreen from "../screens/SellScreen/SellScreen";
 import CartScreen from "../screens/CartScreen/CartScreen";
 import ProfileScreen from "../screens/ProfileScreen/ProfileScreen";
 import MessagesScreen from "../screens/MessagesScreen/MessagesScreen";
+import MessageDetailScreen from "../screens/MessagesScreen/MessageDetailScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSelector } from "react-redux";
 import LoginScreen from "../screens/AuthScreens.js/LoginScreen";
 import SignupScreen from "../screens/AuthScreens.js/SignupScreen";
 import UploadProductScreen from "../screens/SellScreen/UploadProductScreen";
 import ProductDetailsScreen from "../screens/ShopScreen/ProductDetailsScreen";
+import ProductDetailsScreenCompenent from "../screens/Components/ProductDetailScreenCompenent";
+import FriendsManascreens from "../screens/MessagesScreen/FriendsManascreens";
 
 
 const ListScreen = () => (
@@ -29,7 +32,7 @@ function ShopStackNavigator() {
   return (
     <ShopStack.Navigator>
       <ShopStack.Screen name="ShopMain" component={ShopScreen} options={{ headerShown: false }} />
-      <ShopStack.Screen name="ProductDetails" component={ProductDetailsScreen} options={{ title: "Product Details" }} />
+      <ShopStack.Screen name="ProductDetails" component={ProductDetailsScreenCompenent} options={{ title: "Product Details" }} />
     </ShopStack.Navigator>
   );
 }
@@ -78,14 +81,7 @@ function TabNavigator() {
             focused ? <Ionicons name="basket" size={size} color={color} /> : <Ionicons name="basket-outline" size={size} color={color} />,
         }}
       />
-      <Tab.Screen
-        name="List"
-        component={ListScreen}
-        options={{
-          tabBarIcon: ({ focused, color, size }) =>
-            focused ? <Ionicons name="list" size={size} color={color} /> : <Ionicons name="list-outline" size={size} color={color} />,
-        }}
-      />
+      
     </Tab.Navigator>
   );
 }
@@ -102,9 +98,59 @@ function AuthStack() {
   );
 }
 
+
+const friendstabbar = createBottomTabNavigator();
+
+function FriendsTabNavigator() {
+  return (
+    <friendstabbar.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <friendstabbar.Screen
+        name="ChatScreen"
+        component={MessagesScreenStack}
+        options={{
+          tabBarIcon: ({ focused, color, size }) =>
+            focused ? <Ionicons name="cart" size={size} color={color} /> : <Ionicons name="cart-outline" size={size} color={color} />,
+        }}
+      />
+      <friendstabbar.Screen
+        name="Managefrinedstack"
+        component={ManageFrinedsScreenStack}
+        options={{
+          tabBarIcon: ({ focused, color, size }) =>
+            focused ? <Ionicons name="cash" size={size} color={color} /> : <Ionicons name="cash-outline" size={size} color={color} />,
+        }}
+      />
+      </friendstabbar.Navigator>
+  );
+}
+
+
+function MessagesScreenStack() {
+  const MessagesStack = createNativeStackNavigator();
+  return (
+    <MessagesStack.Navigator>
+      <MessagesStack.Screen name="MessagesMain" component={MessagesScreen} options={{ headerShown: false }} />
+      <MessagesStack.Screen name="ChatScreen" component={MessageDetailScreen} options={{ title: "Chat" }} />
+    </MessagesStack.Navigator>
+  );
+} 
+
+function ManageFrinedsScreenStack() {
+  const ManageFrinedsStack = createNativeStackNavigator();
+  return (
+    <ManageFrinedsStack.Navigator>
+      <ManageFrinedsStack.Screen name="ManageFrinedsMain" component={FriendsManascreens} options={{ headerShown: false }} />
+    </ManageFrinedsStack.Navigator>
+  );
+}
+
 export default function App() {
   const user = useSelector((state) => state.auth.user);
-
+console.log("User state in NavigationScreen:", user);
   return (
     <NavigationContainer>
       {user ? (
@@ -119,7 +165,7 @@ export default function App() {
           })}
         >
           <Drawer.Screen name="Home" component={TabNavigator} options={{ title: "Home" }} />
-          <Drawer.Screen name="Messages" component={MessagesScreen} options={{ title: "Messages" }} />
+          <Drawer.Screen name="Messages" component={FriendsTabNavigator} options={{ title: "Messages" }} />
           <Drawer.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
         </Drawer.Navigator>
       ) : (

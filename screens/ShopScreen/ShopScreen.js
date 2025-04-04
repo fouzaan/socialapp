@@ -1,17 +1,37 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl, TextInput } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import SearchBar from "../../Components/SearchBar";
-import { fetchRandomProducts } from "../../store/Slices/UploadProductScreen";
+import { fetchRandomProducts, detailedProductSearch } from "../../store/Slices/UploadProductScreen";
 
 const ShopScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { products, loading, error } = useSelector((state) => state.products);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
     dispatch(fetchRandomProducts());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredProducts(products);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const matchedProducts = products.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) ||
+          item.category.some((cat) => cat.toLowerCase().includes(query))
+      );
+      
+      if (matchedProducts.length > 0) {
+        setFilteredProducts(matchedProducts);
+      } else {
+        dispatch(detailedProductSearch(searchQuery));
+      }
+    }
+  }, [searchQuery, products, dispatch]);
 
   // Pull to refresh function
   const onRefresh = async () => {
@@ -44,14 +64,19 @@ const ShopScreen = ({ navigation }) => {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Shop Our Products</Text>
-      <SearchBar placeholder="Search products..." />
-      {products.length === 0 ? (
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search products..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+      {filteredProducts.length === 0 ? (
         <View style={styles.noProductsContainer}>
           <Text style={styles.noProductsText}>No products available.</Text>
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={filteredProducts}
           numColumns={2}
           keyExtractor={(item) => item.productID}
           renderItem={({ item }) => (
@@ -62,9 +87,7 @@ const ShopScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.productList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#007BFF"]} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#007BFF"]} />}
         />
       )}
     </View>
@@ -82,6 +105,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     marginVertical: 10,
+  },
+  searchInput: {
+    height: 40,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
   loadingContainer: {
     flex: 1,

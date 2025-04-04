@@ -1,149 +1,222 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { 
+  View, Text, Image, FlatList, StyleSheet, TouchableOpacity, Alert, 
+  Modal,
+  Button
+} from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { removeItemFromCart, subscribeToCart, updateCartQuantity} from "../../store/Slices/cartSlice";
 
 const CartScreen = () => {
-  const [cartProducts, setCartProducts] = useState([
-    {
-      id: "1",
-      name: "Wireless Bluetooth Headphones",
-      price: 49.99,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: "2",
-      name: "Smart Watch with Fitness Tracker",
-      price: 199.99,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=2559&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: "3",
-      name: "USB-C Charging Cable",
-      price: 9.99,
-      quantity: 2,
-      image: "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7",
-    },
-  ]);
+  const dispatch = useDispatch();
+  const cartItems = useSelector((state) => state.cart.cartItems);
+   const userid = useSelector((state) => state.auth.user?.uid);
+   const [modalVisible, setModalVisible] = useState(false);
+   const [selectedItem, setSelectedItem] = useState(null);
+   const [quantity, setQuantity] = useState(0);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToCart(userid, dispatch);
+    return () => unsubscribe(); // Cleanup on unmount
+  }, [dispatch]);
+
+  const handleRemoveItem = (productId) => {
+    Alert.alert("Remove Item", "Are you sure you want to remove this item?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", onPress: () => dispatch(removeItemFromCart({ userId: userid, productId })) },
+    ]);
+  };
+
+  
   const calculateTotal = () => {
-    return cartProducts.reduce((total, product) => total + product.price * product.quantity, 0).toFixed(2);
+    return Array.isArray(cartItems) && cartItems.length > 0
+      ? cartItems.reduce((total, item) => total + (item.productData.price * item.quantity), 0).toFixed(2)
+      : "0.00";
+  };
+  
+    const handleItemPress = (item) => {
+      setSelectedItem(item);
+      setQuantity(item.quantity);
+    setModalVisible(true);
   };
 
-  const handleRemoveProduct = (id) => {
-    setCartProducts((prevProducts) => prevProducts.filter((product) => product.id !== id));
+  const handleQuantityChange = (newQuantity) => {
+    if (newQuantity > 0) {
+      setQuantity(newQuantity);
+    }
   };
 
+  const handleUpdateQuantity = () => {
+    dispatch(updateCartQuantity({ userId: userid, productId: selectedItem.productId, selectedQuantity: quantity }));
+    setModalVisible(false);
+  };
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Your Cart</Text>
-      
+    <View style={styles.container}>
+      <Text style={styles.header}>Your Cart</Text>
       <FlatList
-        data={cartProducts}
-        keyExtractor={(item) => item.id}
+        data={cartItems}
+        keyExtractor={(item) => item.productId}
         renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            <Image source={{ uri: item.image }} style={styles.productImage} />
-            <View style={styles.productDetails}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+          <TouchableOpacity onPress={() => handleItemPress(item)}>
+
+          <View style={styles.cartItem}>
+            <Image source={{ uri: item.productData.imageIDs[0] }} style={styles.productImage} />
+            <View style={styles.productInfo}>
+              <Text style={styles.productTitle}>{item.productData.name}</Text>
+              <Text style={styles.productPrice}>${item.productData.price}</Text>
               <Text style={styles.productQuantity}>Quantity: {item.quantity}</Text>
-              <TouchableOpacity onPress={() => handleRemoveProduct(item.id)}>
-                <Text style={styles.removeButton}>Remove</Text>
+              <TouchableOpacity onPress={() => handleRemoveItem(item.productId)}>
+                <Text style={styles.removeText}>Remove</Text>
               </TouchableOpacity>
             </View>
           </View>
+          </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.emptyCartText}>Your cart is empty.</Text>}
       />
-
-      <View style={styles.totalContainer}>
+      <View style={styles.footer}>
         <Text style={styles.totalText}>Total: ${calculateTotal()}</Text>
         <TouchableOpacity style={styles.checkoutButton}>
-          <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+          <Text style={styles.checkoutText}>Proceed to Checkout</Text>
         </TouchableOpacity>
       </View>
+      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {selectedItem && (
+              <>
+                <Image source={{ uri: selectedItem.productData.imageIDs[0] }} style={styles.modalImage} />
+                <Text style={styles.modalTitle}>{selectedItem.productData.name}</Text>
+                <Text style={styles.modalPrice}>${selectedItem.productData.price}</Text>
+                <View style={styles.quantityControls}>
+                  <TouchableOpacity onPress={() => handleQuantityChange(quantity - 1)} style={styles.quantityButton}>
+                    <Text style={styles.quantityButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                  <TouchableOpacity onPress={() => handleQuantityChange(quantity + 1)} style={styles.quantityButton}>
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+                <Button title="Update Quantity" onPress={handleUpdateQuantity} />
+                <Button title="Close" onPress={() => setModalVisible(false)} />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
-export default CartScreen;
-
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
     backgroundColor: "#fff",
+    padding: 15,
   },
-  title: {
+  header: {
     fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
-    marginVertical: 20,
+    marginBottom: 10,
   },
-  productCard: {
+  cartItem: {
     flexDirection: "row",
     backgroundColor: "#f9f9f9",
-    padding: 16,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 10,
+    padding: 10,
+    borderRadius: 10,
+    marginVertical: 5,
   },
   productImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    marginRight: 16,
+    borderRadius: 10,
   },
-  productDetails: {
+  productInfo: {
+    marginLeft: 10,
     flex: 1,
   },
-  productName: {
+  productTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 4,
   },
   productPrice: {
     fontSize: 14,
-    color: "#FF4500",
-    marginBottom: 4,
+    color: "#ff5733",
+    marginVertical: 2,
   },
   productQuantity: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
   },
-  removeButton: {
-    fontSize: 14,
-    color: "red",
-    fontWeight: "bold",
-  },
-  emptyCartText: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
-  },
-  totalContainer: {
-    padding: 16,
+  footer: {
+    padding: 10,
     borderTopWidth: 1,
     borderColor: "#ddd",
-    backgroundColor: "#fff",
+    alignItems: "center",
   },
   totalText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    textAlign: "right",
     marginBottom: 10,
   },
   checkoutButton: {
     backgroundColor: "#007BFF",
-    padding: 16,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  removeText: {
+    color: "red",
+    marginTop: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 10,
     alignItems: "center",
   },
-  checkoutButtonText: {
-    color: "#fff",
+  modalImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 5,
+  },
+  modalPrice: {
     fontSize: 16,
+    color: "#007BFF",
+    marginBottom: 10,
+  },
+  quantityControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  quantityButton: {
+    backgroundColor: "#007BFF",
+    padding: 10,
+    borderRadius: 5,
+    marginHorizontal: 5,
+  },
+  quantityButtonText: {
+    color: "#fff",
+    fontSize: 18,
     fontWeight: "bold",
   },
+  quantityText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginHorizontal: 10,
+  },
 });
+
+export default CartScreen;

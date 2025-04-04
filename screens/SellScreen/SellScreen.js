@@ -2,26 +2,26 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import SearchBar from "../../Components/SearchBar";
-import { fetchRandomProducts } from "../../store/Slices/UploadProductScreen";
+import { fetchRandomProducts, fetchUserProducts } from "../../store/Slices/UploadProductScreen";
 
 const SellScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { products, loading, error } = useSelector((state) => state.products);
+  const { userProducts, loading, error } = useSelector((state) => state.products);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchRandomProducts());
+    dispatch(fetchUserProducts());
   }, [dispatch]);
 
   // Pull to refresh function
   const onRefresh = async () => {
     setRefreshing(true);
-    await dispatch(fetchRandomProducts());
+    await dispatch(fetchUserProducts());
     setRefreshing(false);
   };
 
   const handleProductPress = (product) => {
-    navigation.navigate("ProductDetails", { product });
+    navigation.navigate("CreateProduct", { product });
   };
 
   if (loading && !refreshing) {
@@ -45,13 +45,13 @@ const SellScreen = ({ navigation }) => {
     <View style={styles.screen}>
       <Text style={styles.title}>your Products</Text>
       <SearchBar placeholder="Search products..." />
-      {products.length === 0 ? (
+      {userProducts.length === 0 ? (
         <View style={styles.noProductsContainer}>
           <Text style={styles.noProductsText}>No products available.</Text>
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={userProducts}
           numColumns={2}
           keyExtractor={(item) => item.productID}
           renderItem={({ item }) => (
